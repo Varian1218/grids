@@ -1,0 +1,18 @@
+{
+    "name": "Grids",
+    "rootNamespace": "",
+    "references": [
+        "GUID:34e489fa9a5784af290d17f70ea058c5",
+        "GUID:35ea4f0d0fdd649f59595f25aa775d09",
+        "GUID:2a0bc8a019b72014e8984aa6f673648d"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
