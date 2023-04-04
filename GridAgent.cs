@@ -1,27 +1,26 @@
 using System;
 using System.Numerics;
-using Floats;
-using Ints;
+using Numerics;
 using Transforms;
 
 namespace Grids
 {
     public class GridAgent : IGridAgent
     {
-        private Func<Int2, (float, float)> _getCenter;
+        private Func<Int3, Vector3> _getCenter;
         private int _height;
-        private Func<float, float, Int2> _inverseTransform;
+        private Func<Vector3, Int3> _inverseTransform;
         private bool[,] _locked;
         private ITransform _transform;
-        private Int2 _velocity;
+        private Int3 _velocity;
         private int _width;
 
-        public Func<Int2, (float, float)> GetCenter
+        public Func<Int3, Vector3> GetCenter
         {
             set => _getCenter = value;
         }
 
-        public Func<float, float, Int2> InverseTransform
+        public Func<Vector3, Int3> InverseTransform
         {
             set => _inverseTransform = value;
         }
@@ -41,14 +40,14 @@ namespace Grids
             set => _transform = value;
         }
 
-        public Int2 Velocity
+        public Int3 Velocity
         {
             set => _velocity = value;
         }
 
         private static bool ChangeDirectionMoveToCenter(
             (float X, float Y) absVelocity,
-            (float X, float Y) center,
+            Vector3 center,
             Int2 normalizedVelocity,
             ref Vector3 position
         )
@@ -95,10 +94,20 @@ namespace Grids
             return false;
         }
 
-        private bool IsWalkable(int x, int y)
+        public Int3 GetNextCell()
+        {
+            return _inverseTransform(_transform.Position) + _velocity;
+        }
+
+        public bool IsWalkable(int x, int y)
         {
             if (x < 0 || y < 0 || x >= _width || y >= _height) return false;
             return !_locked[x, y];
+        }
+
+        public bool IsWalkable(Int3 position)
+        {
+            return IsWalkable(position.X, position.Y);
         }
 
         public void Lock(bool value, int x, int y)
@@ -108,7 +117,7 @@ namespace Grids
 
         private static void NotWalkableMoveToCenter(
             (float X, float Y) absVelocity,
-            (float X, float Y) center,
+            Vector3 center,
             ref Vector3 position
         )
         {
@@ -149,9 +158,9 @@ namespace Grids
                 Y = velocity.Y.Normalize()
             };
             var position = _transform.Position;
-            var inversePosition = _inverseTransform(position.X, position.Z); 
-            (float X, float Y) center = _getCenter(inversePosition);
-            var neighbor = inversePosition + normalizedVelocity;
+            var inversePosition = _inverseTransform(position); 
+            var center = _getCenter(inversePosition);
+            var neighbor = inversePosition + _velocity;
             if (IsWalkable(neighbor.X, neighbor.Y))
             {
                 if (!ChangeDirectionMoveToCenter(absVelocity, center, normalizedVelocity, ref position))
@@ -170,11 +179,45 @@ namespace Grids
 
         public void SetVelocity(Vector2 value)
         {
-            Velocity = new Int2
+            Velocity = new Int3
             {
                 X = (int)value.X,
                 Y = (int)value.Y
             };
+        }
+
+        public bool TryStep(out Double3 delta, TimeSpan dt, out Double3 remainingDelta)
+        {
+            var position = _transform.Position;
+            var inversePosition = _inverseTransform(position);
+            delta = _velocity * dt.TotalSeconds;
+            if (IsWalkable(inversePosition + _velocity))
+            {
+                delta = _velocity * dt.TotalSeconds;
+                remainingDelta = Double3.Zero;
+                return true;
+            }
+
+            var center = _getCenter(inversePosition);
+            var centerDelta = center - position;
+            var centerSqrDelta = centerDelta.LengthSquared(); 
+            if (centerSqrDelta > 0)
+            {
+                if (centerSqrDelta > delta.SqrMagnitude())
+                {
+                    delta = _velocity * dt.TotalSeconds;
+                    remainingDelta = Double3.Zero;
+                    return true;
+                }
+
+                remainingDelta = delta - centerDelta;
+                delta = centerDelta;
+                return true;
+            }
+
+            delta = Double3.Zero;
+            remainingDelta = Double3.Zero;
+            return false;
         }
     }
 }

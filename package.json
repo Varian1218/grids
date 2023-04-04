@@ -1,8 +1,12 @@
 {
+  "dependencies": {
+    "com.little-lion.numerics": "https://github.com/Varian1218/numerics.git",
+    "com.little-lion.transforms": "https://github.com/Varian1218/transforms.git"
+  },
   "description": "",
   "displayName": "Grids",
   "keywords": [],
   "name": "com.little-lion.grids",
   "unity": "2021.3",
-  "version": "1.0.0"
+  "version": "1.0.1"
 }
