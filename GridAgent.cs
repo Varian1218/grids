@@ -12,7 +12,6 @@ namespace Grids
         private Func<Vector3, Int3> _inverseTransform;
         private bool[,] _locked;
         private ITransform _transform;
-        private Int3 _velocity;
         private int _width;
 
         public Func<Int3, Vector3> GetCenter
@@ -40,9 +39,15 @@ namespace Grids
             set => _transform = value;
         }
 
-        public Int3 Velocity
+        public Int3 Velocity { get; set; }
+
+        public bool CanMove()
         {
-            set => _velocity = value;
+            var position = _transform.Position;
+            var inversePosition = _inverseTransform(position);
+            if (IsWalkable(inversePosition + Velocity)) return true;
+            var centerDelta = _getCenter(inversePosition) - position;
+            return centerDelta.LengthSquared() > 0;
         }
 
         private static bool ChangeDirectionMoveToCenter(
@@ -94,9 +99,9 @@ namespace Grids
             return false;
         }
 
-        public Int3 GetNextCell()
+        public Int3 GetNextCell(Int3 direction)
         {
-            return _inverseTransform(_transform.Position) + _velocity;
+            return _inverseTransform(_transform.Position) + direction;
         }
 
         public bool IsWalkable(int x, int y)
@@ -113,6 +118,25 @@ namespace Grids
         public void Lock(bool value, int x, int y)
         {
             _locked[x, y] = value;
+        }
+
+        public void Move(TimeSpan dt)
+        {
+            var position = _transform.Position;
+            var inversePosition = _inverseTransform(position);
+            var delta = Velocity * dt.TotalSeconds;
+            if (IsWalkable(inversePosition + Velocity))
+            {
+                _transform.Position += delta;
+            }
+            else
+            {
+                var center = _getCenter(inversePosition);
+                _transform.Position = Double3.Clamp(_transform.Position, center, delta);
+                var centerDelta = center - position;
+                var centerSqrDelta = centerDelta.LengthSquared();
+                _transform.Position = centerSqrDelta > 0 ? _transform.Position + delta : center;
+            }
         }
 
         private static void NotWalkableMoveToCenter(
@@ -149,8 +173,8 @@ namespace Grids
 
         public void Step(TimeSpan dt)
         {
-            if (_velocity.SqrMagnitude() == 0) return;
-            var velocity = _velocity * (float)dt.TotalSeconds;
+            if (Velocity.SqrMagnitude() == 0) return;
+            var velocity = Velocity * (float)dt.TotalSeconds;
             (float X, float Y) absVelocity = (Math.Abs(velocity.X), Math.Abs(velocity.Y));
             var normalizedVelocity = new Int2
             {
@@ -160,7 +184,7 @@ namespace Grids
             var position = _transform.Position;
             var inversePosition = _inverseTransform(position); 
             var center = _getCenter(inversePosition);
-            var neighbor = inversePosition + _velocity;
+            var neighbor = inversePosition + Velocity;
             if (IsWalkable(neighbor.X, neighbor.Y))
             {
                 if (!ChangeDirectionMoveToCenter(absVelocity, center, normalizedVelocity, ref position))
@@ -190,10 +214,10 @@ namespace Grids
         {
             var position = _transform.Position;
             var inversePosition = _inverseTransform(position);
-            delta = _velocity * dt.TotalSeconds;
-            if (IsWalkable(inversePosition + _velocity))
+            delta = Velocity * dt.TotalSeconds;
+            if (IsWalkable(inversePosition + Velocity))
             {
-                delta = _velocity * dt.TotalSeconds;
+                delta = Velocity * dt.TotalSeconds;
                 remainingDelta = Double3.Zero;
                 return true;
             }
@@ -205,7 +229,7 @@ namespace Grids
             {
                 if (centerSqrDelta > delta.SqrMagnitude())
                 {
-                    delta = _velocity * dt.TotalSeconds;
+                    delta = Velocity * dt.TotalSeconds;
                     remainingDelta = Double3.Zero;
                     return true;
                 }
