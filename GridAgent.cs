@@ -12,11 +12,6 @@ namespace Grids
         private Func<Int3, Vector3> _transform;
         private int _width;
 
-        public Func<Int3, Vector3> GetCenter
-        {
-            set => _transform = value;
-        }
-
         public Func<Vector3, Int3> InverseTransform
         {
             set => _inverseTransform = value;
@@ -30,6 +25,11 @@ namespace Grids
                 _locked = new bool[value.X, value.Y];
                 _width = value.X;
             }
+        }
+
+        public Func<Int3, Vector3> Transform
+        {
+            set => _transform = value;
         }
 
         public Int3 Velocity { get; set; }
