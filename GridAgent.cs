@@ -17,7 +17,7 @@ namespace Grids
             set => _inverseTransform = value;
         }
 
-        public (int X, int Y) Size
+        public Int2 Size
         {
             set
             {
