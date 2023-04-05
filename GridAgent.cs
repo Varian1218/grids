@@ -1,22 +1,20 @@
 using System;
 using System.Numerics;
 using Numerics;
-using Transforms;
 
 namespace Grids
 {
     public class GridAgent : IGridAgent
     {
-        private Func<Int3, Vector3> _getCenter;
         private int _height;
         private Func<Vector3, Int3> _inverseTransform;
         private bool[,] _locked;
-        private ITransform _transform;
+        private Func<Int3, Vector3> _transform;
         private int _width;
 
         public Func<Int3, Vector3> GetCenter
         {
-            set => _getCenter = value;
+            set => _transform = value;
         }
 
         public Func<Vector3, Int3> InverseTransform
@@ -34,19 +32,13 @@ namespace Grids
             }
         }
 
-        public ITransform Transform
-        {
-            set => _transform = value;
-        }
-
         public Int3 Velocity { get; set; }
 
-        public bool CanMove()
+        public bool CanMove(Vector3 position)
         {
-            var position = _transform.Position;
             var inversePosition = _inverseTransform(position);
             if (IsWalkable(inversePosition + Velocity)) return true;
-            var centerDelta = _getCenter(inversePosition) - position;
+            var centerDelta = _transform(inversePosition) - position;
             return centerDelta.LengthSquared() > 0;
         }
 
@@ -99,9 +91,9 @@ namespace Grids
             return false;
         }
 
-        public Int3 GetNextCell(Int3 direction)
+        public Int3 GetNextCell(Int3 direction, Vector3 position)
         {
-            return _inverseTransform(_transform.Position) + direction;
+            return _inverseTransform(position) + direction;
         }
 
         public bool IsWalkable(int x, int y)
@@ -120,26 +112,33 @@ namespace Grids
             _locked[x, y] = value;
         }
 
-        public void Move(TimeSpan dt)
+        public bool MoveToCenterStep(TimeSpan dt, ref Vector3 position)
         {
-            var position = _transform.Position;
-            var inversePosition = _inverseTransform(position);
-            var delta = Velocity * dt.TotalSeconds;
-            if (IsWalkable(inversePosition + Velocity))
+            if (Velocity.SqrMagnitude() == 0) return false;
+            var velocity = Velocity * (float)dt.TotalSeconds;
+            (float X, float Y) absVelocity = (Math.Abs(velocity.X), Math.Abs(velocity.Y));
+            var normalizedVelocity = new Int2
             {
-                _transform.Position += delta;
-            }
-            else
+                X = velocity.X.Normalize(),
+                Y = velocity.Y.Normalize()
+            };
+            var inversePosition = _inverseTransform(position); 
+            var center = _transform(inversePosition);
+            var neighbor = inversePosition + Velocity;
+            if (IsWalkable(neighbor.X, neighbor.Y))
             {
-                var center = _getCenter(inversePosition);
-                _transform.Position = Double3.Clamp(_transform.Position, center, delta);
-                var centerDelta = center - position;
-                var centerSqrDelta = centerDelta.LengthSquared();
-                _transform.Position = centerSqrDelta > 0 ? _transform.Position + delta : center;
+                if (!ChangeDirectionMoveToCenter(absVelocity, center, normalizedVelocity, ref position))
+                {
+                    position.X += velocity.X;
+                    position.Z += velocity.Y;
+                }
+
+                return true;
             }
+            return NotWalkableMoveToCenter(absVelocity, center, ref position);
         }
 
-        private static void NotWalkableMoveToCenter(
+        private static bool NotWalkableMoveToCenter(
             (float X, float Y) absVelocity,
             Vector3 center,
             ref Vector3 position
@@ -154,8 +153,10 @@ namespace Grids
                     position.X = absDelta < absVelocity.X
                         ? center.X
                         : position.X + absVelocity.X * delta.Normalize();
-                    return;
+                    return true;
                 }
+
+                return false;
             }
 
             if (absVelocity.Y > 0)
@@ -167,39 +168,65 @@ namespace Grids
                     position.Z = absDelta < absVelocity.Y
                         ? center.Y
                         : position.Z + absVelocity.Y * delta.Normalize();
+                    return true;
                 }
+
+                return false;
             }
+
+            throw new Exception();
         }
 
-        public void Step(TimeSpan dt)
+        public bool Step(TimeSpan dt, ref Vector3 position)
         {
-            if (Velocity.SqrMagnitude() == 0) return;
-            var velocity = Velocity * (float)dt.TotalSeconds;
-            (float X, float Y) absVelocity = (Math.Abs(velocity.X), Math.Abs(velocity.Y));
-            var normalizedVelocity = new Int2
+            var inversePosition = _inverseTransform(position);
+            var delta = Velocity * dt.TotalSeconds;
+            if (IsWalkable(inversePosition + Velocity))
             {
-                X = velocity.X.Normalize(),
-                Y = velocity.Y.Normalize()
-            };
-            var position = _transform.Position;
-            var inversePosition = _inverseTransform(position); 
-            var center = _getCenter(inversePosition);
-            var neighbor = inversePosition + Velocity;
-            if (IsWalkable(neighbor.X, neighbor.Y))
-            {
-                if (!ChangeDirectionMoveToCenter(absVelocity, center, normalizedVelocity, ref position))
-                {
-                    position.X += velocity.X;
-                    position.Z += velocity.Y;
-                }
-            }
-            else
-            {
-                NotWalkableMoveToCenter(absVelocity, center, ref position);
+                position += delta;
+                return true;
             }
 
-            _transform.Position = position;
+            var centerPosition = _transform(inversePosition);
+            var centerDelta = centerPosition - position;
+            var sqrCenterDelta = centerDelta.LengthSquared();
+            if (sqrCenterDelta == 0) return false;
+            position = centerDelta.LengthSquared() > delta.SqrMagnitude() ? position + delta : centerPosition;
+            return true;
         }
+
+        // public bool Step(TimeSpan dt, Vector3 position, out Double3 remainingDelta)
+        // {
+        //     var inversePosition = _inverseTransform(position);
+        //     delta = Velocity * dt.TotalSeconds;
+        //     if (IsWalkable(inversePosition + Velocity))
+        //     {
+        //         delta = Velocity * dt.TotalSeconds;
+        //         remainingDelta = Double3.Zero;
+        //         return true;
+        //     }
+        //
+        //     var center = _getCenter(inversePosition);
+        //     var centerDelta = center - position;
+        //     var centerSqrDelta = centerDelta.LengthSquared(); 
+        //     if (centerSqrDelta > 0)
+        //     {
+        //         if (centerSqrDelta > delta.SqrMagnitude())
+        //         {
+        //             delta = Velocity * dt.TotalSeconds;
+        //             remainingDelta = Double3.Zero;
+        //             return true;
+        //         }
+        //
+        //         remainingDelta = delta - centerDelta;
+        //         delta = centerDelta;
+        //         return true;
+        //     }
+        //
+        //     delta = Double3.Zero;
+        //     remainingDelta = Double3.Zero;
+        //     return false;
+        // }
 
         public void SetVelocity(Vector2 value)
         {
@@ -208,40 +235,6 @@ namespace Grids
                 X = (int)value.X,
                 Y = (int)value.Y
             };
-        }
-
-        public bool TryStep(out Double3 delta, TimeSpan dt, out Double3 remainingDelta)
-        {
-            var position = _transform.Position;
-            var inversePosition = _inverseTransform(position);
-            delta = Velocity * dt.TotalSeconds;
-            if (IsWalkable(inversePosition + Velocity))
-            {
-                delta = Velocity * dt.TotalSeconds;
-                remainingDelta = Double3.Zero;
-                return true;
-            }
-
-            var center = _getCenter(inversePosition);
-            var centerDelta = center - position;
-            var centerSqrDelta = centerDelta.LengthSquared(); 
-            if (centerSqrDelta > 0)
-            {
-                if (centerSqrDelta > delta.SqrMagnitude())
-                {
-                    delta = Velocity * dt.TotalSeconds;
-                    remainingDelta = Double3.Zero;
-                    return true;
-                }
-
-                remainingDelta = delta - centerDelta;
-                delta = centerDelta;
-                return true;
-            }
-
-            delta = Double3.Zero;
-            remainingDelta = Double3.Zero;
-            return false;
         }
     }
 }
