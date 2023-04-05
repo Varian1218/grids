@@ -195,7 +195,7 @@ namespace Grids
         public bool Step(TimeSpan dt, ref GridAgentVector3 position)
         {
             var inversePosition = _inverseTransform(position);
-            var delta = _speed * _forward * dt.TotalSeconds;
+            var delta = _forward * _speed * GetDelta(dt);
             if (IsWalkable(inversePosition + _forward))
             {
                 position += delta;
