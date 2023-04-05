@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Numerics;
+using Numerics;
 
 namespace Grids
 {
     public interface IGridAgent
     {
-        void Lock(bool value, int x, int y);
+        Func<Int3, bool> IsWalkable { get; set; }
         bool MoveToCenterStep(TimeSpan dt, ref Vector3 position);
         bool Step(TimeSpan dt, ref Vector3 position);
     }
