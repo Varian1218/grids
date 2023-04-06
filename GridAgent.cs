@@ -118,7 +118,7 @@ namespace Grids
         )
         {
             var centerDelta = center - position;
-            var absCenterDelta = Math.Abs(delta);
+            var absCenterDelta = Math.Abs(centerDelta);
             if (absCenterDelta < float.Epsilon) return false;
             var lesser = absCenterDelta < delta;
             if (lesser) subPosition += (delta - absCenterDelta) * direction;
@@ -136,6 +136,7 @@ namespace Grids
         {
             return axis switch
             {
+                Axis.None => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
                 Axis.X => ChangeDirectionMoveToCenter(center.Z, delta, direction, ref position.Z, ref position.X),
                 Axis.Y => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
                 Axis.Z => ChangeDirectionMoveToCenter(center.X, delta, direction, ref position.X, ref position.Z),
@@ -187,6 +188,7 @@ namespace Grids
         {
             return axis switch
             {
+                Axis.None => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
                 Axis.X => NotWalkableMoveToCenter(center.X, delta, ref position.X),
                 Axis.Y => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
                 Axis.Z => NotWalkableMoveToCenter(center.Z, delta, ref position.Z),
