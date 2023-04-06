@@ -130,7 +130,7 @@ namespace Grids
             }
             else
             {
-                forward = 1f;
+                forward = direction;
                 subForward = 0f;
             }
 
