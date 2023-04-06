@@ -17,6 +17,7 @@ namespace Grids
     {
         private enum Axis
         {
+            None,
             X,
             Y,
             Z
@@ -34,16 +35,18 @@ namespace Grids
         {
             set
             {
-                if (Math.Abs(value.X) + Math.Abs(value.Y) + Math.Abs(value.Z) != 1)
-                    throw new ArgumentOutOfRangeException(nameof(value), value, null);
+                var x = Math.Abs(value.X);
+                var y = Math.Abs(value.Y);
+                var z = Math.Abs(value.Z);
+                if (x + y + z != 1 || x * y * z != 1) throw new ArgumentOutOfRangeException(nameof(value), value, null);
                 _forward = value;
                 switch (value.X)
                 {
-                    case > 1:
+                    case > 0:
                         _axis = Axis.X;
                         _direction = 1;
                         return;
-                    case < 1:
+                    case < 0:
                         _axis = Axis.X;
                         _direction = -1;
                         return;
@@ -51,11 +54,11 @@ namespace Grids
 
                 switch (value.Y)
                 {
-                    case > 1:
+                    case > 0:
                         _axis = Axis.Y;
                         _direction = 1;
                         return;
-                    case < 1:
+                    case < 0:
                         _axis = Axis.Y;
                         _direction = -1;
                         return;
@@ -63,11 +66,11 @@ namespace Grids
 
                 switch (value.Z)
                 {
-                    case > 1:
+                    case > 0:
                         _axis = Axis.Z;
                         _direction = 1;
                         return;
-                    case < 1:
+                    case < 0:
                         _axis = Axis.Z;
                         _direction = -1;
                         return;
@@ -179,7 +182,8 @@ namespace Grids
             return true;
         }
 
-        private static bool NotWalkableMoveToCenter(Axis axis, Vector3 center, float delta, ref GridAgentVector3 position)
+        private static bool NotWalkableMoveToCenter(Axis axis, Vector3 center, float delta,
+            ref GridAgentVector3 position)
         {
             return axis switch
             {
