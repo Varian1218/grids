@@ -38,7 +38,7 @@ namespace Grids
                 var x = Math.Abs(value.X);
                 var y = Math.Abs(value.Y);
                 var z = Math.Abs(value.Z);
-                if (x + y + z != 1 || x * y * z != 1) throw new ArgumentOutOfRangeException(nameof(value), value, null);
+                if (x + y + z != 1) throw new ArgumentOutOfRangeException(nameof(value), value, null);
                 _forward = value;
                 switch (value.X)
                 {
