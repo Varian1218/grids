@@ -33,6 +33,7 @@ namespace Grids
 
         public Int3 Forward
         {
+            get => _forward;
             set
             {
                 var x = Math.Abs(value.X);
