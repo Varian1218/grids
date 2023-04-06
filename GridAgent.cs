@@ -114,7 +114,9 @@ namespace Grids
             float center,
             float delta,
             int direction,
+            ref float forward,
             ref float position,
+            ref float subForward,
             ref float subPosition
         )
         {
@@ -122,7 +124,16 @@ namespace Grids
             var absCenterDelta = Math.Abs(centerDelta);
             if (absCenterDelta < float.Epsilon) return false;
             var lesser = absCenterDelta < delta;
-            if (lesser) subPosition += (delta - absCenterDelta) * direction;
+            if (lesser)
+            {
+                subPosition += (delta - absCenterDelta) * direction;
+            }
+            else
+            {
+                forward = 1f;
+                subForward = 0f;
+            }
+
             position = lesser ? center : position + delta * centerDelta.Normalize();
             return true;
         }
@@ -132,15 +143,32 @@ namespace Grids
             Vector3 center,
             float delta,
             int direction,
+            ref Vector3 forward,
             ref GridAgentVector3 position
         )
         {
             return axis switch
             {
                 Axis.None => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
-                Axis.X => ChangeDirectionMoveToCenter(center.Z, delta, direction, ref position.Z, ref position.X),
+                Axis.X => ChangeDirectionMoveToCenter(
+                    center.Z,
+                    delta,
+                    direction,
+                    ref forward.Z,
+                    ref position.Z,
+                    ref forward.X,
+                    ref position.X
+                ),
                 Axis.Y => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
-                Axis.Z => ChangeDirectionMoveToCenter(center.X, delta, direction, ref position.X, ref position.Z),
+                Axis.Z => ChangeDirectionMoveToCenter(
+                    center.X,
+                    delta,
+                    direction,
+                    ref position.X,
+                    ref position.X,
+                    ref position.Z,
+                    ref position.Z
+                ),
                 _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, null)
             };
         }
@@ -162,7 +190,7 @@ namespace Grids
             return _inverseTransform(position) + direction;
         }
 
-        public bool MoveToCenterStep(ShortTimeSpan dt, ref GridAgentVector3 position)
+        public bool MoveToCenterStep(ShortTimeSpan dt, ref Vector3 forward, ref GridAgentVector3 position)
         {
             if (_speed == 0) return false;
             var inversePosition = _inverseTransform(position);
@@ -170,7 +198,7 @@ namespace Grids
             var neighbor = inversePosition + _forward;
             var delta = _speed * dt;
             if (!IsWalkable(neighbor)) return NotWalkableMoveToCenter(_axis, center, delta, ref position);
-            if (ChangeDirectionMoveToCenter(_axis, center, delta, _direction, ref position)) return true;
+            if (ChangeDirectionMoveToCenter(_axis, center, delta, _direction, ref forward, ref position)) return true;
             position += delta * _forward;
             return true;
         }

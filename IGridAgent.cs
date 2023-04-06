@@ -19,7 +19,7 @@ namespace Grids
     {
         Int3 Forward { get; set; }
         Func<Int3, bool> IsWalkable { get; set; }
-        bool MoveToCenterStep(ShortTimeSpan dt, ref GridAgentVector3 position);
+        bool MoveToCenterStep(ShortTimeSpan dt, ref Vector3 forward, ref GridAgentVector3 position);
         bool Step(ShortTimeSpan dt, ref GridAgentVector3 position);
     }
 }
