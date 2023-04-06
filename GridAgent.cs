@@ -108,9 +108,9 @@ namespace Grids
         }
 #endif
 #if USE_VECTOR_3_GRID_AGENT
-        private static float GetDelta(TimeSpan dt)
+        private static float GetDelta(ShortTimeSpan dt)
         {
-            return (float)dt.TotalSeconds;
+            return dt.Seconds;
         }
 #endif
 
@@ -119,7 +119,7 @@ namespace Grids
             return _inverseTransform(position) + direction;
         }
 
-        public bool MoveToCenterStep(TimeSpan dt, ref GridAgentVector3 position)
+        public bool MoveToCenterStep(ShortTimeSpan dt, ref GridAgentVector3 position)
         {
             if (_speed == 0) return false;
             var velocity = _forward * _speed * GetDelta(dt);
@@ -192,7 +192,7 @@ namespace Grids
             return value.LengthSquared();
         }
 #endif
-        public bool Step(TimeSpan dt, ref GridAgentVector3 position)
+        public bool Step(ShortTimeSpan dt, ref GridAgentVector3 position)
         {
             var inversePosition = _inverseTransform(position);
             var delta = _forward * _speed * GetDelta(dt);

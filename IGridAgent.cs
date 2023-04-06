@@ -17,7 +17,7 @@ namespace Grids
     public interface IGridAgent
     {
         Func<Int3, bool> IsWalkable { get; set; }
-        bool MoveToCenterStep(TimeSpan dt, ref GridAgentVector3 position);
-        bool Step(TimeSpan dt, ref GridAgentVector3 position);
+        bool MoveToCenterStep(ShortTimeSpan dt, ref GridAgentVector3 position);
+        bool Step(ShortTimeSpan dt, ref GridAgentVector3 position);
     }
 }
