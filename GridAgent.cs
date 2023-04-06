@@ -57,7 +57,7 @@ namespace Grids
         private static bool ChangeDirectionMoveToCenter(
             Int3 absForward,
             Vector3 center,
-            Int2 normalizedVelocity,
+            Int3 normalizedVelocity,
             ref GridAgentVector3 position
         )
         {
@@ -80,20 +80,20 @@ namespace Grids
                     return true;
                 }
             }
-            else if (absForward.Y > 0)
+            else if (absForward.Z > 0)
             {
                 var delta = center.X - position.X;
                 var absDelta = Math.Abs(delta);
                 if (absDelta > float.Epsilon)
                 {
-                    if (absDelta < absForward.Y)
+                    if (absDelta < absForward.Z)
                     {
                         position.X = center.X;
-                        position.Z = normalizedVelocity.Y * (absForward.Y - absDelta);
+                        position.Z = normalizedVelocity.Z * (absForward.Z - absDelta);
                     }
                     else
                     {
-                        position.X += absForward.Y * delta.Normalize();
+                        position.X += absForward.Z * delta.Normalize();
                     }
 
                     return true;
@@ -125,10 +125,11 @@ namespace Grids
             if (_speed == 0) return false;
             var velocity = _forward * _speed * GetDelta(dt);
             var absForward = _forward.Abs();
-            var normalizedVelocity = new Int2
+            var normalizedVelocity = new Int3
             {
                 X = velocity.X.Normalize(),
-                Y = velocity.Y.Normalize()
+                Y = velocity.Y.Normalize(),
+                Z = velocity.Z.Normalize()
             };
             var inversePosition = _inverseTransform(position);
             var center = _transform(inversePosition);
