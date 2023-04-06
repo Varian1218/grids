@@ -122,7 +122,7 @@ namespace Grids
             if (absCenterDelta < float.Epsilon) return false;
             var lesser = absCenterDelta < delta;
             if (lesser) subPosition += (delta - absCenterDelta) * direction;
-            position = lesser ? center : delta * centerDelta.Normalize();
+            position = lesser ? center : position + delta * centerDelta.Normalize();
             return true;
         }
 
