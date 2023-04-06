@@ -165,15 +165,15 @@ namespace Grids
                 return false;
             }
 
-            if (absForward.Y > 0)
+            if (absForward.Z > 0)
             {
-                var delta = center.Y - position.Z;
+                var delta = center.Z - position.Z;
                 var absDelta = Math.Abs(delta);
                 if (absDelta > float.Epsilon)
                 {
-                    position.Z = absDelta < absForward.Y
-                        ? center.Y
-                        : position.Z + absForward.Y * delta.Normalize();
+                    position.Z = absDelta < absForward.Z
+                        ? center.Z
+                        : position.Z + absForward.Z * delta.Normalize();
                     return true;
                 }
 
