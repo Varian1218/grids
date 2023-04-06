@@ -154,9 +154,9 @@ namespace Grids
                     center.Z,
                     delta,
                     direction,
-                    ref forward.Z,
-                    ref position.Z,
                     ref forward.X,
+                    ref position.Z,
+                    ref forward.Z,
                     ref position.X
                 ),
                 Axis.Y => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
@@ -164,9 +164,9 @@ namespace Grids
                     center.X,
                     delta,
                     direction,
-                    ref forward.X,
-                    ref position.X,
                     ref forward.Z,
+                    ref position.X,
+                    ref forward.X,
                     ref position.Z
                 ),
                 _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, null)
