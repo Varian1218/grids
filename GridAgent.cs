@@ -12,8 +12,18 @@ namespace Grids
 #if USE_VECTOR_3_GRID_AGENT
     using GridAgentVector3 = Vector3;
 #endif
+
     public class GridAgent : IGridAgent
     {
+        private enum Axis
+        {
+            X,
+            Y,
+            Z
+        }
+
+        private Axis _axis;
+        private int _direction;
         private Int3 _forward;
         private Func<Vector3, Int3> _inverseTransform;
         private Func<Int3, bool> _isWalkable;
@@ -22,7 +32,49 @@ namespace Grids
 
         public Int3 Forward
         {
-            set => _forward = value;
+            set
+            {
+                if (Math.Abs(value.X) + Math.Abs(value.Y) + Math.Abs(value.Z) != 1)
+                    throw new ArgumentOutOfRangeException(nameof(value), value, null);
+                _forward = value;
+                switch (value.X)
+                {
+                    case > 1:
+                        _axis = Axis.X;
+                        _direction = 1;
+                        return;
+                    case < 1:
+                        _axis = Axis.X;
+                        _direction = -1;
+                        return;
+                }
+
+                switch (value.Y)
+                {
+                    case > 1:
+                        _axis = Axis.Y;
+                        _direction = 1;
+                        return;
+                    case < 1:
+                        _axis = Axis.Y;
+                        _direction = -1;
+                        return;
+                }
+
+                switch (value.Z)
+                {
+                    case > 1:
+                        _axis = Axis.Z;
+                        _direction = 1;
+                        return;
+                    case < 1:
+                        _axis = Axis.Z;
+                        _direction = -1;
+                        return;
+                }
+
+                throw new ArgumentOutOfRangeException(nameof(value), value, null);
+            }
         }
 
         public Func<Vector3, Int3> InverseTransform
@@ -55,52 +107,37 @@ namespace Grids
         }
 
         private static bool ChangeDirectionMoveToCenter(
-            Int3 absForward,
+            float center,
+            float delta,
+            int direction,
+            ref float position,
+            ref float subPosition
+        )
+        {
+            var centerDelta = center - position;
+            var absCenterDelta = Math.Abs(delta);
+            if (absCenterDelta < float.Epsilon) return false;
+            var lesser = absCenterDelta < delta;
+            if (lesser) subPosition += (delta - absCenterDelta) * direction;
+            position = lesser ? center : delta * centerDelta.Normalize();
+            return true;
+        }
+
+        private static bool ChangeDirectionMoveToCenter(
+            Axis axis,
             Vector3 center,
-            Int3 normalizedVelocity,
+            float delta,
+            int direction,
             ref GridAgentVector3 position
         )
         {
-            if (absForward.X > 0)
+            return axis switch
             {
-                var delta = center.Y - position.Z;
-                var absDelta = Math.Abs(delta);
-                if (absDelta > float.Epsilon)
-                {
-                    if (absDelta < absForward.X)
-                    {
-                        position.Z = center.Y;
-                        position.X += normalizedVelocity.X * (absForward.X - absDelta);
-                    }
-                    else
-                    {
-                        position.Z += absForward.X * delta.Normalize();
-                    }
-
-                    return true;
-                }
-            }
-            else if (absForward.Z > 0)
-            {
-                var delta = center.X - position.X;
-                var absDelta = Math.Abs(delta);
-                if (absDelta > float.Epsilon)
-                {
-                    if (absDelta < absForward.Z)
-                    {
-                        position.X = center.X;
-                        position.Z = normalizedVelocity.Z * (absForward.Z - absDelta);
-                    }
-                    else
-                    {
-                        position.X += absForward.Z * delta.Normalize();
-                    }
-
-                    return true;
-                }
-            }
-
-            return false;
+                Axis.X => ChangeDirectionMoveToCenter(center.Z, delta, direction, ref position.Z, ref position.X),
+                Axis.Y => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
+                Axis.Z => ChangeDirectionMoveToCenter(center.X, delta, direction, ref position.X, ref position.Z),
+                _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, null)
+            };
         }
 #if USE_DOUBLE_3_GRID_AGENT
         private static double GetDelta(TimeSpan dt)
@@ -123,64 +160,34 @@ namespace Grids
         public bool MoveToCenterStep(ShortTimeSpan dt, ref GridAgentVector3 position)
         {
             if (_speed == 0) return false;
-            var velocity = _forward * _speed * GetDelta(dt);
-            var absForward = _forward.Abs();
-            var normalizedVelocity = new Int3
-            {
-                X = velocity.X.Normalize(),
-                Y = velocity.Y.Normalize(),
-                Z = velocity.Z.Normalize()
-            };
             var inversePosition = _inverseTransform(position);
             var center = _transform(inversePosition);
             var neighbor = inversePosition + _forward;
-            if (IsWalkable(neighbor))
-            {
-                if (!ChangeDirectionMoveToCenter(absForward, center, normalizedVelocity, ref position))
-                {
-                    position.X += velocity.X;
-                    position.Z += velocity.Y;
-                }
-
-                return true;
-            }
-
-            return NotWalkableMoveToCenter(absForward, center, ref position);
+            var delta = _speed * dt;
+            if (!IsWalkable(neighbor)) return NotWalkableMoveToCenter(_axis, center, delta, ref position);
+            if (ChangeDirectionMoveToCenter(_axis, center, delta, _direction, ref position)) return true;
+            position += delta * _forward;
+            return true;
         }
 
-        private static bool NotWalkableMoveToCenter(Int3 absForward, Vector3 center, ref GridAgentVector3 position)
+        private static bool NotWalkableMoveToCenter(float center, float delta, ref float position)
         {
-            if (absForward.X > 0)
+            var centerVector = center - position;
+            var centerDistance = Math.Abs(centerVector);
+            if (centerDistance < float.Epsilon) return false;
+            position = centerDistance < delta ? center : position + delta * centerVector.Normalize();
+            return true;
+        }
+
+        private static bool NotWalkableMoveToCenter(Axis axis, Vector3 center, float delta, ref GridAgentVector3 position)
+        {
+            return axis switch
             {
-                var delta = center.X - position.X;
-                var absDelta = Math.Abs(delta);
-                if (absDelta > float.Epsilon)
-                {
-                    position.X = absDelta < absForward.X
-                        ? center.X
-                        : position.X + absForward.X * delta.Normalize();
-                    return true;
-                }
-
-                return false;
-            }
-
-            if (absForward.Z > 0)
-            {
-                var delta = center.Z - position.Z;
-                var absDelta = Math.Abs(delta);
-                if (absDelta > float.Epsilon)
-                {
-                    position.Z = absDelta < absForward.Z
-                        ? center.Z
-                        : position.Z + absForward.Z * delta.Normalize();
-                    return true;
-                }
-
-                return false;
-            }
-
-            throw new Exception();
+                Axis.X => NotWalkableMoveToCenter(center.X, delta, ref position.X),
+                Axis.Y => throw new ArgumentOutOfRangeException(nameof(axis), axis, null),
+                Axis.Z => NotWalkableMoveToCenter(center.Z, delta, ref position.Z),
+                _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, null)
+            };
         }
 #if USE_DOUBLE_3_GRID_AGENT
         private static double SqrMagnitude(GridAgentVector3 value)
