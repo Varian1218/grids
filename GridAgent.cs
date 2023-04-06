@@ -164,9 +164,9 @@ namespace Grids
                     center.X,
                     delta,
                     direction,
+                    ref forward.X,
                     ref position.X,
-                    ref position.X,
-                    ref position.Z,
+                    ref forward.Z,
                     ref position.Z
                 ),
                 _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, null)
