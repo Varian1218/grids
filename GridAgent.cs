@@ -1,18 +1,9 @@
-#define USE_VECTOR_3_GRID_AGENT
 using System;
 using System.Numerics;
 using Numerics;
-using Times;
 
 namespace Grids
 {
-#if USE_DOUBLE_3_GRID_AGENT
-    using GridAgentVector3 = Double3;
-#endif
-#if USE_VECTOR_3_GRID_AGENT
-    using GridAgentVector3 = Vector3;
-#endif
-
     public class GridAgent : IGridAgent
     {
         private enum Axis
@@ -144,7 +135,7 @@ namespace Grids
             float delta,
             int direction,
             ref Vector3 forward,
-            ref GridAgentVector3 position
+            ref Vector3 position
         )
         {
             return axis switch
@@ -178,25 +169,18 @@ namespace Grids
             return dt.TotalSeconds;
         }
 #endif
-#if USE_VECTOR_3_GRID_AGENT
-        private static float GetDelta(ShortTimeSpan dt)
-        {
-            return dt.Seconds;
-        }
-#endif
 
         public Int3 GetNextCell(Int3 direction, Vector3 position)
         {
             return _inverseTransform(position) + direction;
         }
 
-        public bool MoveToCenterStep(ShortTimeSpan dt, ref Vector3 forward, ref GridAgentVector3 position)
+        public bool MoveToCenterStep(float delta, ref Vector3 forward, ref Vector3 position)
         {
             if (_speed == 0) return false;
             var inversePosition = _inverseTransform(position);
             var center = _transform(inversePosition);
             var neighbor = inversePosition + _forward;
-            var delta = _speed * dt;
             if (!IsWalkable(neighbor)) return NotWalkableMoveToCenter(_axis, center, delta, ref position);
             if (ChangeDirectionMoveToCenter(_axis, center, delta, _direction, ref forward, ref position)) return true;
             position += delta * _forward;
@@ -213,7 +197,7 @@ namespace Grids
         }
 
         private static bool NotWalkableMoveToCenter(Axis axis, Vector3 center, float delta,
-            ref GridAgentVector3 position)
+            ref Vector3 position)
         {
             return axis switch
             {
@@ -224,25 +208,19 @@ namespace Grids
                 _ => throw new ArgumentOutOfRangeException(nameof(axis), axis, null)
             };
         }
-#if USE_DOUBLE_3_GRID_AGENT
-        private static double SqrMagnitude(GridAgentVector3 value)
-        {
-            return value.SqrMagnitude();
-        }
-#endif
-#if USE_VECTOR_3_GRID_AGENT
-        private static double SqrMagnitude(GridAgentVector3 value)
+
+        private static double SqrMagnitude(Vector3 value)
         {
             return value.LengthSquared();
         }
-#endif
-        public bool Step(ShortTimeSpan dt, ref GridAgentVector3 position)
+
+        public bool Step(float delta, ref Vector3 position)
         {
             var inversePosition = _inverseTransform(position);
-            var delta = _forward * _speed * GetDelta(dt);
+            var deltaForward = _forward * delta;
             if (IsWalkable(inversePosition + _forward))
             {
-                position += delta;
+                position += deltaForward;
                 return true;
             }
 
@@ -250,7 +228,9 @@ namespace Grids
             var centerDelta = centerPosition - position;
             var sqrCenterDelta = SqrMagnitude(centerDelta);
             if (sqrCenterDelta == 0) return false;
-            position = SqrMagnitude(centerDelta) > SqrMagnitude(delta) ? position + delta : centerPosition;
+            position = SqrMagnitude(centerDelta) > SqrMagnitude(deltaForward)
+                ? position + deltaForward
+                : centerPosition;
             return true;
         }
     }

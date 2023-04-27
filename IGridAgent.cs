@@ -1,25 +1,14 @@
-﻿#define USE_VECTOR_3_GRID_AGENT
-using System;
-#if USE_VECTOR_3_GRID_AGENT
+﻿using System;
 using System.Numerics;
-#endif
 using Numerics;
-using Times;
 
 namespace Grids
 {
-#if USE_DOUBLE_3_GRID_AGENT
-    using GridAgentVector3 = Double3;
-#endif
-#if USE_VECTOR_3_GRID_AGENT
-    using GridAgentVector3 = Vector3;
-#endif
-
     public interface IGridAgent
     {
         Int3 Forward { get; set; }
         Func<Int3, bool> IsWalkable { get; set; }
-        bool MoveToCenterStep(ShortTimeSpan dt, ref Vector3 forward, ref GridAgentVector3 position);
-        bool Step(ShortTimeSpan dt, ref GridAgentVector3 position);
+        bool MoveToCenterStep(float delta, ref Vector3 forward, ref Vector3 position);
+        bool Step(float delta, ref Vector3 position);
     }
 }

@@ -2,8 +2,7 @@
     "name": "Grids",
     "rootNamespace": "",
     "references": [
-        "GUID:8f8d79523ceea0b47978bd67b3cb5d1b",
-        "GUID:e2c06f66710174805a43140fa6f80959"
+        "GUID:8f8d79523ceea0b47978bd67b3cb5d1b"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
